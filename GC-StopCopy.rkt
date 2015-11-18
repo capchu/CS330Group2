@@ -10,7 +10,7 @@
     (set! off-ptr (/ (heap-size) 2)))
   )
 
-;Taken from your mark sweep
+;Taken from your mark-sweep
 (define (toggle-marker)
   (if (symbol=? marker 'no)
       (set! marker 'yes)
@@ -44,14 +44,15 @@
 ;Starting of the old code (modified to work)
 (define (gc:alloc-flat p)
  (begin
-   (when (> (+ heap-ptr 2) (/ (heap-size) 2))
+   (when (> (+ heap-ptr 4) (/ (heap-size) 2))
      (stop-copy (get-root-set))
-     (error 'gc:alloc-flat "out of memory"))
+     )
    (heap-set! heap-ptr 'prim)
-   (heap-set! (+ 1 heap-ptr) p)
-   (set! heap-ptr (+ 2 heap-ptr))
- 
-   (- heap-ptr 2)))
+   (heap-set! (+ heap-ptr 1) marker)
+   (heap-set! (+ heap-ptr 2) p)
+   (set! heap-ptr (+ 4 heap-ptr))
+   (- heap-ptr 4)
+   ))
  
 (define (gc:cons f r)
  (begin
@@ -85,5 +86,5 @@
  (eq? (heap-ref a) 'prim))
  
 (define (gc:deref a)
- (heap-ref (+ 1 a)))
+ (heap-ref (+ 2 a)))
 
