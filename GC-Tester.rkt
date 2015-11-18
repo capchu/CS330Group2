@@ -1,5 +1,5 @@
 #lang plai/mutator
-(allocator-setup "GC-MarkSweep.rkt" 20)
+(allocator-setup "GC-MarkSweep.rkt" 30)
 ;(allocator-setup "GC-SaveCopy.rkt" 20)
 
 ;kepp since definition?
@@ -8,6 +8,7 @@
 (+ 3 7)
 (define y 90)
 (- y 50)
+(+ 1 1)
 ;This is also only temporary
 ;(cons 5 (cons 4 (cons 3 empty)))
 ;Permanant list?
