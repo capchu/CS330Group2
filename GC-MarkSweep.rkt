@@ -64,11 +64,11 @@
         [(or (symbol=? sym 'prim)
              (symbol=? sym 'cons))
          (if (not (symbol=? ptr-marker marker))
-             (if (and (not (= prev -1))
-                      (symbol=? (heap-ref prev) 'free))
+             (if (and (not (= prev-free -1))
+                      (symbol=? (heap-ref prev-free) 'free))
                  (begin
-                   (heap-set! (+ prev 2) (+ (heap-ref (+ prev 2)) 4))
-                   (sweep-rec (+ ptr 4) ptr prev));coalesce free blocks
+                   (heap-set! (+ prev-free 2) (+ (heap-ref (+ prev-free 2)) 4))
+                   (sweep-rec (+ ptr 4) ptr prev-free));coalesce free blocks
                  (begin
                    (make-free ptr 4 prev-free)
                    (sweep-rec (+ ptr 4) ptr ptr)));make new free block and link it to the previous free block
