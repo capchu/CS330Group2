@@ -1,15 +1,52 @@
 #lang plai/collector
 
 (define heap-ptr 'uninitialized-heap-ptr)
+(define off-ptr 'uninitialized-heap-ptr)
+(define marker 'no)
 
 (define (init-allocator)
- (set! heap-ptr 0))
- 
+  (begin
+    (set! heap-ptr 0)
+    (set! off-ptr (/ (heap-size) 2)))
+  )
+
+;Taken from your mark sweep
+(define (toggle-marker)
+  (if (symbol=? marker 'no)
+      (set! marker 'yes)
+      (set! marker 'no)))
+
+(define (mark roots)
+  (when (not (empty? roots))
+         (mark-rec (read-root (first roots)))
+         (mark (rest roots))))
+
+(define (mark-rec obj-ptr)
+  ;mark obj-ptr
+  (printf (number->string obj-ptr))
+  (heap-set! (+ obj-ptr 1) marker)
+  (when (and (symbol? (heap-ref obj-ptr))
+             (symbol=? 'cons (heap-ref obj-ptr)))
+    (mark-rec (+ obj-ptr 1))
+    (mark-rec (+ obj-ptr 2))))
+
+
+;The functions for stop-copy
+(define (stop-copy root-set)
+  (toggle-marker)
+  (mark root-set)
+  (copy))
+
+(define (copy)
+  (error "made it to copy")
+  )
+
+;Starting of the old code (modified to work)
 (define (gc:alloc-flat p)
  (begin
-   (when (> (+ heap-ptr 2) (heap-size))
-     ;(error 'gc:alloc-flat "out of memory"))
-     save-copy)
+   (when (> (+ heap-ptr 2) (/ (heap-size) 2))
+     (stop-copy (get-root-set))
+     (error 'gc:alloc-flat "out of memory"))
    (heap-set! heap-ptr 'prim)
    (heap-set! (+ 1 heap-ptr) p)
    (set! heap-ptr (+ 2 heap-ptr))
@@ -18,9 +55,9 @@
  
 (define (gc:cons f r)
  (begin
-   (when (> (+ heap-ptr 3) (heap-size))
-     ;(error 'gc:cons "out of memory"))
-     save-copy)
+   (when (> (+ heap-ptr 3) (/ (heap-size) 2))
+     (stop-copy (get-root-set))
+     (error 'gc:cons "out of memory"))
    (heap-set! heap-ptr 'cons)
    (heap-set! (+ 1 heap-ptr) f)
    (heap-set! (+ 2 heap-ptr) r)
@@ -50,7 +87,3 @@
 (define (gc:deref a)
  (heap-ref (+ 1 a)))
 
-(define (save-copy)
-  ;(error "out of memory -- in save-copy")
-  (set! heap-ptr 0)
-  )

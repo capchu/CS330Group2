@@ -1,6 +1,6 @@
 #lang plai/mutator
-(allocator-setup "GC-MarkSweep.rkt" 30)
-;(allocator-setup "GC-SaveCopy.rkt" 20)
+;(allocator-setup "GC-MarkSweep.rkt" 30)
+(allocator-setup "GC-StopCopy.rkt" 20)
 
 ;kepp since definition?
 (define x 10)
