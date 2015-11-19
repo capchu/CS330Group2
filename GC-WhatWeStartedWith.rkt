@@ -1,15 +1,13 @@
 #lang plai/collector
-
 (define heap-ptr 'uninitialized-heap-ptr)
-
+ 
 (define (init-allocator)
  (set! heap-ptr 0))
  
 (define (gc:alloc-flat p)
  (begin
    (when (> (+ heap-ptr 2) (heap-size))
-     ;(error 'gc:alloc-flat "out of memory"))
-     save-copy)
+     (error 'gc:alloc-flat "out of memory"))
    (heap-set! heap-ptr 'prim)
    (heap-set! (+ 1 heap-ptr) p)
    (set! heap-ptr (+ 2 heap-ptr))
@@ -19,8 +17,7 @@
 (define (gc:cons f r)
  (begin
    (when (> (+ heap-ptr 3) (heap-size))
-     ;(error 'gc:cons "out of memory"))
-     save-copy)
+     (error 'gc:cons "out of memory"))
    (heap-set! heap-ptr 'cons)
    (heap-set! (+ 1 heap-ptr) f)
    (heap-set! (+ 2 heap-ptr) r)
@@ -49,8 +46,3 @@
  
 (define (gc:deref a)
  (heap-ref (+ 1 a)))
-
-(define (save-copy)
-  ;(error "out of memory -- in save-copy")
-  (set! heap-ptr 0)
-  )

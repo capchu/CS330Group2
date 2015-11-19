@@ -3,3 +3,5 @@ compiled/drracket/errortrace/GC-MarkSweep_rkt.dep
 compiled/drracket/errortrace/GC-MarkSweep_rkt.zo
 compiled/drracket/errortrace/GC-SaveCopy_rkt.dep
 compiled/drracket/errortrace/GC-SaveCopy_rkt.zo
+compiled/drracket/errortrace/GC-StopCopy_rkt.dep
+compiled/drracket/errortrace/GC-StopCopy_rkt.zo
