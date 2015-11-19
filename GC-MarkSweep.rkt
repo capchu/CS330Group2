@@ -2,6 +2,7 @@
 
 (define heap-ptr 'uninitialized-heap-ptr)
 (define marker 'no)
+(define prev-free-ptr -1)
  
 (define (init-allocator)
   (begin
@@ -16,10 +17,17 @@
     (heap-set! (+ 3 ptr) next)))
 
 (define (get-free-block free-ptr size)
+  (set! prev-free-ptr -1)
+  (get-free-block-rec free-ptr size))
+
+(define (get-free-block-rec free-ptr size)
   (cond
     [(not (location? free-ptr)) -1]
     [(<= size (heap-ref (+ free-ptr 2))) free-ptr]
-    [else (get-free-block free-ptr size)]))
+    [else
+     (begin
+       (set! prev-free-ptr free-ptr)
+       (get-free-block-rec (heap-ref (+ free-ptr 3)) size))]))
 
 (define (gc:alloc-flat p)
   (begin
@@ -33,12 +41,40 @@
       (heap-set! free-ptr 'prim)
       (heap-set! (+ free-ptr 1) marker)
       (heap-set! (+ free-ptr 2) p)
+     
+      (if (> free-size 4)
+        (make-free (+ free-ptr 4) (- free-size 4) free-next)
+        (when (location? prev-free-ptr)
+          (heap-set! (+ prev-free-ptr 3) free-next)))
       (when (= free-ptr heap-ptr)
         (if (> free-size 4)
-            #t;move free block down 4
-            #f;reassign prev free pointer
-            )
-        (set! heap-ptr free-next))
+            (set! heap-ptr (+ free-ptr 4))
+            (set! heap-ptr free-next)))
+      free-ptr)))
+
+(define (gc:cons f r)
+  (begin
+    (when (not (location? (get-free-block heap-ptr 4)))
+      (mark-sweep (get-root-set f r))
+      (when (not (location? (get-free-block heap-ptr 4)))
+        (error 'gc:alloc-flat "out of memory")))
+    (let ([free-ptr (get-free-block heap-ptr 4)]
+          [free-size (heap-ref (+ heap-ptr 2))]
+          [free-next (heap-ref (+ heap-ptr 3))])
+
+      (heap-set! free-ptr 'cons)
+      (heap-set! (+ free-ptr 1) marker)
+      (heap-set! (+ free-ptr 2) f)
+      (heap-set! (+ free-ptr 3) r)
+      
+      (if (> free-size 4)
+        (make-free (+ free-ptr 4) (- free-size 4) free-next)
+        (when (location? prev-free-ptr)
+          (heap-set! (+ prev-free-ptr 3) free-next)))
+      (when (= free-ptr heap-ptr)
+        (if (> free-size 4)
+            (set! heap-ptr (+ free-ptr 4))
+            (set! heap-ptr free-next)))
       free-ptr)))
 
 (define (toggle-marker)
@@ -57,20 +93,23 @@
          (mark (rest roots))))
 
 (define (mark-rec obj-ptr)
-  ;mark obj-ptr
   (printf (number->string obj-ptr))
-  (heap-set! (+ obj-ptr 1) marker)
-  (when (and (symbol? (heap-ref obj-ptr))
-             (symbol=? 'cons (heap-ref obj-ptr)))
-    (mark-rec (+ obj-ptr 1))
-    (mark-rec (+ obj-ptr 2))))
+  (when (not (eq? (heap-ref (+ obj-ptr 1)) marker)) ;prevent cycles
+    (heap-set! (+ obj-ptr 1) marker)
+    (cond
+      [(and (symbol? (heap-ref obj-ptr))
+            (symbol=? 'cons (heap-ref obj-ptr)))
+       (mark-rec (+ obj-ptr 1))
+       (mark-rec (+ obj-ptr 2))]
+      [(procedure? (heap-ref (+ obj-ptr 2)))
+       (mark (procedure-roots (heap-ref (+ obj-ptr 2))))])))
 
 (define (sweep)
   (printf (string-append "\nSweeping non-" (symbol->string marker)))
   (sweep-rec 0 -1 -1))
 
 (define (sweep-rec ptr prev prev-free)
-  (if (<= (+ ptr 4) (heap-size))
+  (if (< (+ ptr 4) (heap-size))
       (let ([sym (heap-ref ptr)]
             [ptr-marker (heap-ref (+ ptr 1))])
         (printf (number->string ptr))
@@ -92,19 +131,6 @@
       (if (= prev-free -1)
           (error 'sweep-rec "COMPLETELY out of memory")
           (set! heap-ptr prev-free))))
- 
-(define (gc:cons f r)
-  (begin
-    (when (> (+ heap-ptr 3) (heap-size))
-      (mark-sweep (get-root-set f r))
-      #|everything that is reachable in root-set, in 'f' and in 'r' => (get-root-set f r)|#
-      (error 'gc:cons "out of memory"))
-    (heap-set! heap-ptr 'cons)
-    (heap-set! (+ 1 heap-ptr) marker)
-    (heap-set! (+ 2 heap-ptr) f)
-    (heap-set! (+ 3 heap-ptr) r)
-    (set! heap-ptr (+ 4 heap-ptr))
-    (- heap-ptr 4)))
  
 (define (gc:cons? a)
   (eq? (heap-ref a) 'cons))
