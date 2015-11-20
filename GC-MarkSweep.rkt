@@ -9,6 +9,8 @@
     (set! heap-ptr 0)
     (make-free 0 (heap-size) -1)))
 
+;; make-free: number number number -> number
+;; creates a free block starting at the given address
 (define (make-free ptr size next)
   (begin
     (heap-set! ptr 'free)
@@ -16,10 +18,14 @@
     (heap-set! (+ 2 ptr) size)
     (heap-set! (+ 3 ptr) next)))
 
+;; get-free-block: number number -> number
+;; starts up a recursive search through the free list
 (define (get-free-block free-ptr size)
   (set! prev-free-ptr -1)
   (get-free-block-rec free-ptr size))
 
+;; get-free-block-rec: number number -> number
+;; recursively searches for a free block in the free list
 (define (get-free-block-rec free-ptr size)
   (cond
     [(not (location? free-ptr)) -1]
@@ -77,21 +83,29 @@
             (set! heap-ptr free-next)))
       free-ptr)))
 
+;; toggle-marker: nothing -> nothing
+;; toggles the marker between 'yes and 'no; now we don't have to reset all of the markers each time
 (define (toggle-marker)
   (if (symbol=? marker 'no)
       (set! marker 'yes)
       (set! marker 'no)))
 
+;; mark-sweep: list[roots] -> void
+;; starts the garbage collection
 (define (mark-sweep root-set)
   (toggle-marker)
   (mark root-set)
   (sweep))
 
+;; mark: list[roots] -> void
+;; initiates the mark phase
 (define (mark roots)
   (when (not (empty? roots))
          (mark-rec (read-root (first roots)))
          (mark (rest roots))))
 
+;; mark-rec: number -> void
+;; recursively marks all blocks associated w/ obj-ptr
 (define (mark-rec obj-ptr)
   (printf (number->string obj-ptr))
   (when (not (eq? (heap-ref (+ obj-ptr 1)) marker)) ;prevent cycles
@@ -99,15 +113,19 @@
     (cond
       [(and (symbol? (heap-ref obj-ptr))
             (symbol=? 'cons (heap-ref obj-ptr)))
-       (mark-rec (+ obj-ptr 1))
-       (mark-rec (+ obj-ptr 2))]
+       (mark-rec (heap-ref (+ obj-ptr 2)))
+       (mark-rec (heap-ref (+ obj-ptr 3)))]
       [(procedure? (heap-ref (+ obj-ptr 2)))
        (mark (procedure-roots (heap-ref (+ obj-ptr 2))))])))
 
+;; sweep: void -> void
+;; initiates the sweep phase
 (define (sweep)
   (printf (string-append "\nSweeping non-" (symbol->string marker)))
   (sweep-rec 0 -1 -1))
 
+;; sweep-rec: number number number -> void
+;; recursively frees all blocks that have not been marked
 (define (sweep-rec ptr prev prev-free)
   (if (< (+ ptr 4) (heap-size))
       (let ([sym (heap-ref ptr)]
@@ -124,7 +142,7 @@
                      (sweep-rec (+ ptr 4) ptr prev-free));coalesce free blocks
                    (begin
                      (make-free ptr 4 prev-free)
-                     (sweep-rec (+ ptr 4) ptr ptr)));make new free block and link it to the previous free block
+                     (sweep-rec (+ ptr 4) ptr ptr)))
                (sweep-rec (+ ptr 4) ptr prev-free))]
           [(symbol=? sym 'free)
            (sweep-rec (+ ptr (heap-ref (+ ptr 2))) ptr ptr)]))
@@ -155,4 +173,9 @@
   (eq? (heap-ref a) 'prim))
  
 (define (gc:deref a)
-  (heap-ref (+ 2 a)))
+  (if (eq? (heap-ref a) 'prim)
+      (heap-ref (+ 2 a))
+      (error 'gc:deref
+             (string-append
+              "Expecting 'prim, received '"
+              (symbol->string (heap-ref a))))))
