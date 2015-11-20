@@ -1,14 +1,20 @@
 #lang plai/mutator
-(allocator-setup "GC-MarkSweep.rkt" 20)
-;(allocator-setup "GC-SaveCopy.rkt" 20)
+;(allocator-setup "GC-MarkSweep.rkt" 20)
+(allocator-setup "GC-StopCopy.rkt" 60)
 
 ;kepp since definition?
-;(define x 10)
+(define y 20)
+(define l (cons 1 (cons 2 (cons 3 empty))))
 ;All parts of this including answer are temp
-;(+ 3 7)
-;(define y 20)
-
-;(- y 50)
+(+ 7 7)
+(- y 50)
+(define g -100)
+(+ 1 y)
+(+ 1 y)
+(define x -1)
+(+ 7 y)
+(define q 17)
+;(define z -2)
 ;This is also only temporary
 
 
@@ -28,7 +34,7 @@
 
 
 
-(define (fact x)
-  (if (zero? x)
-      1
-      (* x (fact (sub1 x)))))
+;(define (fact x)
+;  (if (zero? x)
+;      1
+;      (* x (fact (sub1 x)))))
